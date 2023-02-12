@@ -7,7 +7,7 @@ patat:
       command: runghc
       fragment: true
     python:
-      command: python -
+      command: USERNAME=jmoore PASSWORD=nicetry python -
       fragment: true
 ...
 
@@ -39,7 +39,9 @@ patat:
   - How can *returns* help you program pythonically in a functional style?
 
   As we navigate, I will attempt to showcase similar concepts as they appear
-   in Haskell.
+   in Haskell to try and highlight the inspiration. Although it is strictly
+   not necessary for understanding *returns*, it may be interesting for the
+   viewer.
 
 ---
 
@@ -74,10 +76,7 @@ patat:
   computational context. (In Haskell, these types would be 
   considered instances of Monad.)
 
-    ヽ(;ﾟ;∀;ﾟ; )ﾉ --- Oh no, he said Monad! Panic!
-
-    (=￣▽￣=)Ｖ --- do not worry, last time I'm mentioning it, no need to go
-                learn category theory just yet!
+  - "Say the line Bart!" https://www.youtube.com/watch?v=NM3TU5VfEMM
 
   - __compositional helpers__ are tools that can be used to make first
   class function use with our containers more pythonic and remove some
@@ -662,6 +661,217 @@ def main() -> Future[int]:  # sync function!
    return Future(first()).bind_awaitable(second)
 
 print(first())
+print(asyncio.run(first()))
+print(second(first()))
+print(asyncio.run(second(asyncio.run(first()))))
 print(main())
 print(asyncio.run(main().awaitable()))
 ```
+
+---
+
+# Haskell Async
+
+Asynchronous processing requires much less syntactic sugar in Haskell.
+
+```Haskell
+import Control.Concurrent
+import Control.Concurrent.Async
+
+one :: IO Int
+one = return 1
+
+plusOne :: IO Int -> IO Int
+plusOne x = do
+    threadDelay 1000000
+    fmap (+1) x
+
+plusTwo :: IO Int -> IO Int
+plusTwo x = do
+    threadDelay 2000000
+    fmap (+2) x
+
+main :: IO ()
+main = do
+    res <- concurrently (plusOne one) (plusTwo one)
+    print res
+```
+
+---
+
+# Point free methods
+
+There are times when using container methods are not fun. They aren't as easily
+ composable when defining pipelines. I glanced over it earlier, when I was 
+ discussing pipelines.
+
+*pointfree* provides access to container functions like `.map` and `.bind`
+ without requiring to call them on the container directly. In other words,
+ it converts a function like "a -> Container[b]" to "Container[a] -> Container[b]". 
+ This allows you to take what you would previously write `x.f(y)` and write it
+ more like `f(x)(y)`.
+
+```python
+from py.maybe import get_root, divide
+from returns.pointfree import bind
+from returns.pipeline import flow, pipe
+
+pointfree = flow(
+    (4, 2),
+    lambda args: divide(*args),
+    bind(get_root),
+)
+print(f"{pointfree=}")
+
+non_pointfree = flow(
+    (4, 2),
+    lambda args: divide(*args),
+    lambda x: x.bind(get_root),
+)
+print(f"{non_pointfree=}")
+```
+
+---
+
+# RequiresContext container 
+
+The *RequiresContext* container allows you to rely on context from framework
+ settings, environment, etc. without having to use side effects or passing 
+ that information as a parameter.
+
+For instance, have you ever needed to access a settings variable? You can
+ can access them directly like this, but then your implementation is polluted
+ with project specific details. 
+
+ ```python
+from py.config import SETTINGS
+
+def sshpass_cmd(cmd: str) -> str:
+    return (
+        f"sshpass -p {SETTINGS['password']} "
+        f"ssh -p {SETTINGS['port']} {SETTINGS['username']}@{SETTINGS['ip']} "
+        f"{cmd}"
+    )
+
+def get_hostname() -> str:
+    return sshpass_cmd("hostname")
+
+print(get_hostname())
+ ```
+
+---
+
+# RequiresContext container 
+
+Without using returns, you could make the fuction pure again, but you would
+ have to add settings as an argument up an and down the entire call stack.
+
+ ```python
+from py.config import SETTINGS
+
+def sshpass_cmd(settings: dict, cmd: str) -> str:
+    return (
+        f"sshpass -p {settings['password']} "
+        f"ssh -p {settings['port']} {settings['username']}@{settings['ip']} "
+        f"{cmd}"
+    )
+
+def get_hostname(settings: dict) -> str:
+    return sshpass_cmd(settings, "hostname")
+
+print(get_hostname(SETTINGS))
+ ```
+
+
+---
+
+# RequiresContext container 
+
+With returns, you can write your functions in such a way that the dependency
+ can be injected allowing us to more accurately acheive the single responsibility
+ principle by programming against an interface rather than the dependency
+ directly.
+
+ ```python
+from py.config import SETTINGS
+from typing_extensions import Protocol
+from returns.context import RequiresContext
+
+class _Settings(Protocol):
+    ip: str
+    port: int
+    user: str
+    passwd: str
+
+def sshpass_cmd(cmd: str) -> RequiresContext[str, _Settings]:
+    def internal_sshpass_cmd(settings):
+        return (
+            f"sshpass -p {settings['password']} "
+            f"ssh -p {settings['port']} {settings['username']}@{settings['ip']} "
+            f"{cmd}"
+        )
+    return RequiresContext(internal_sshpass_cmd)
+
+def get_hostname() -> RequiresContext[str, _Settings]:
+    return sshpass_cmd("hostname")
+
+print(get_hostname()(SETTINGS))
+ ```
+
+---
+
+# Haskell "RequiresContext"
+
+```Haskell
+data Settings = 
+    Settings {ip :: String, port :: Int, user :: String, passwd :: String}
+
+class Monad m => SshContextM m where
+  getSettings :: m Settings
+  executeCmd :: String -> m String
+
+mySettings :: SshContextM m => m Settings
+mySettings = return $ Settings {ip = "1.1.1.1", port = 22, user = "test", passwd = "test"}
+
+craftCmd :: Settings -> String -> String
+craftCmd settings cmd =
+    "sshpass -p " ++ passwd' ++ " ssh -p " ++ port' ++ " " ++ user' ++ "@" ++ ip' ++ " " ++ cmd
+    where
+     ip' = ip settings
+     port' = show $ port settings
+     user' = user settings
+     passwd' = passwd settings
+
+sshPassCmd :: SshContextM m => String -> m String
+sshPassCmd cmd = getSettings >>= (\settings -> return $ craftCmd settings cmd)
+
+instance SshContextM IO where
+  getSettings = mySettings
+  executeCmd = sshPassCmd
+
+getHostname :: SshContextM m => m String
+getHostname = executeCmd "hostname"
+
+main :: IO ()
+main = getHostname >>= print
+```
+
+---
+
+# Closing Remarks
+
+I think by now you get the point, I think I got the high level points. I didn't
+ get everything though. Here are some points I didn't want to squeeze in.
+
+ - You can create your own containers.
+ - mypy/pytest integrations.
+ - hypothesis integrations.
+ - Foldables
+ - Currying (partial is preferred by authors unless using integrations)
+ - There is a whole library of helper functions, many I didn't cover.
+
+Many thanks to the dry-python team for returns, if they ever see this.
+
+---
+
+# Questions?
