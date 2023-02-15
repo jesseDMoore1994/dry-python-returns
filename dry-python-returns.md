@@ -866,9 +866,10 @@ I think by now you get the point, I think I got the high level points. I didn't
  - You can create your own containers.
  - mypy/pytest integrations.
  - hypothesis integrations.
- - Foldables
- - Currying (partial is preferred by authors unless using integrations)
+ - Foldables.
+ - Currying. (partial is preferred by authors unless using integrations)
  - There is a whole library of helper functions, many I didn't cover.
+ - works great with match expressions!
 
 Many thanks to the dry-python team for returns, if they ever see this.
 
