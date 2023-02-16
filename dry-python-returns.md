@@ -57,7 +57,7 @@ patat:
     programmatic intent.
 
   - ... forces me to examine and be concerned with the edge cases of my software
-    by forcing safe types on me instead of muttling them around the boundary of
+    by forcing safe types on me instead of muttling meaning around the boundary of
     control flow.
 
   - ... guides me to separate architectural concerns by making it easier to write
@@ -249,7 +249,7 @@ print(f"pipe: {divide_then_root((4,2),)}")
 # Result Container
 
 Our next container is the result container, which can be used to convey
- either sucess or failure.
+ either success or failure.
 
 Lets say your application maintains a list of users as dictionaries, and
  you want to perform operations on that list.
