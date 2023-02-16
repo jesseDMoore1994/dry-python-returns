@@ -75,8 +75,8 @@ patat:
   - __containers__ are special boxes that are use to wrap values in a 
   computational context. (In Haskell, these types would be 
   considered instances of Monad.)
-
-  - "Say the line Bart!" https://www.youtube.com/watch?v=NM3TU5VfEMM
+    - as we all know, A Monad is just a monoid in the category of
+      endofunctors :)
 
   - __compositional helpers__ are tools that can be used to make first
   class function use with our containers more pythonic and remove some
