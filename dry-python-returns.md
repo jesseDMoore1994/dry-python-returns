@@ -32,7 +32,11 @@ patat:
 
   Thanks to HSV.py for allowing me to present on this topic.
 
-  slides are available on my github, or upon request.
+  slides are available on my github:
+
+  https://github.com/jesseDMoore1994/dry-python-returns/tree/hsv.py
+
+  (Or just ask me and I can forward it to you.)
 
 ---
 
