@@ -10,6 +10,29 @@ patat:
       command: USERNAME=jmoore PASSWORD=nicetry python -
       fragment: true
 ...
+---
+
+# Introductions
+
+ - Jesse Moore
+
+ - Master of Science in Software Engineering
+
+ - Bachelor of Science in Computer Science
+
+ - Roughly nine years of professional experience at ADTRAN.
+
+ - Develop with Debian and Python by day.
+
+ - Dabble with NixOS and Haskell by night.
+
+---
+
+# HSV.py Plug
+
+  Thanks to HSV.py for allowing me to present on this topic.
+
+  slides are available on my github, or upon request.
 
 ---
 
@@ -36,12 +59,7 @@ patat:
 
   - How does *returns* contribute to solving those problems?
 
-  - How can *returns* help you program pythonically in a functional style?
-
-  As we navigate, I will attempt to showcase similar concepts as they appear
-   in Haskell to try and highlight the inspiration. Although it is strictly
-   not necessary for understanding *returns*, it may be interesting for the
-   viewer.
+  I also hope to provide useful examples along the way.
 
 ---
 
@@ -75,8 +93,6 @@ patat:
   - __containers__ are special boxes that are use to wrap values in a 
   computational context. (In Haskell, these types would be 
   considered instances of Monad.)
-    - as we all know, A Monad is just a monoid in the category of
-      endofunctors :)
 
   - __compositional helpers__ are tools that can be used to make first
   class function use with our containers more pythonic and remove some
@@ -91,7 +107,7 @@ patat:
 ```python
 from math import sqrt
 from typing import Optional
-from returns.maybe import Maybe, maybe
+from returns.maybe import maybe
 
 @maybe
 def get_root(square: float) -> Optional[float]:
@@ -182,35 +198,6 @@ print(get_root(divide(-4, 2)))
 These None checks would only spiral further and every function written that
  would receive a *None* would have to validate it. Using returns, we can write
  code without fear of the *None* case and trust the bindings.
-
----
-
-# Haskell Maybe
-
-Haskell has a Maybe type that seems inspirational. (This is a recurring theme)
-
-```haskell
-import qualified Prelude
-import Prelude hiding (sqrt, div)
-
-sqrt :: Float -> Maybe Float
-sqrt x
-    | x < 0     = Nothing
-    | otherwise = Just $ Prelude.sqrt x
-
-div :: Float -> Float -> Maybe Float
-div x y
-    | y /= 0    = Just $ (/) x y
-    | otherwise = Nothing
-
-main = do
-    print $ sqrt =<< div 4.0 2.0
-    print $ sqrt =<< div (-4.0) 2.0
-```
-
-
-(Notice the `=<<` operator, this is haskell's bind function, which does
- the same thing as `.bind` in the statement `divide(4, 2).bind(get_root)`.
 
 ---
 
@@ -367,38 +354,6 @@ print(get(my_users, "_id", "1").bind(safe(lambda x: x["middle"])))
 
 ---
 
-# Haskell Either
-
-```haskell
-import Prelude hiding (last)
-
-data User = User {_id :: String, first :: String, last :: String}
-
-myUsers :: [User]
-myUsers = [ User {_id = "1", first = "Jesse", last = "Moore"}
-           , User {_id = "2", first = "John", last = "Doe"}
-           , User {_id = "3", first = "Jane", last = "Doe"}
-           ]
-
-getUserByKeyValue :: [User] -> (User -> String) -> String -> Either String User
-getUserByKeyValue users key value = if (length filtered_users) > 0 
-                                    then Right $ head filtered_users
-                                    else Left "Cannot Find User!"
-    where 
-    filtered_users = filter (\user -> key user == value) users
-
-getValueFromUser :: (User -> String) -> User -> Either String String
-getValueFromUser key user = Right $ key user
-
-main = do
-    print $ getValueFromUser first =<< getUserByKeyValue myUsers _id "1"
-    print $ getValueFromUser first =<< getUserByKeyValue myUsers _id "4"
-    -- Haskell won't allow you to try and access an invalid record field
-    -- print $ getValueFromUser middle =<< getUserByKeyValue myUsers _id "4"
-```
-
----
-
 # Converters
 
 Now that we have both *Maybe* and *Result*, it might be useful from time
@@ -531,51 +486,6 @@ for _id in range(1, 5):
 
 ---
 
-# Haskell IO
-
-```haskell
-import Prelude hiding (last)
-
-data User = User {_id :: String, first :: String, last :: String}
-
-myUsers :: [User]
-myUsers = [ User {_id = "1", first = "Jesse", last = "Moore"}
-           , User {_id = "2", first = "John", last = "Doe"}
-           , User {_id = "3", first = "Jane", last = "Doe"}
-           ]
-
-getUserByKeyValue :: [User] -> (User -> String) -> String -> Either String User
-getUserByKeyValue users key value = if (length filtered_users) > 0 
-                                    then Right $ head filtered_users
-                                    else Left "Cannot Find User!"
-    where 
-    filtered_users = filter (\user -> key user == value) users
-
-getLifeStoryForUser :: User -> IO String
-getLifeStoryForUser u = readFile filepath
-    where
-        filename = (first u) ++ "_" ++ (last u)
-        filepath = "life_stories/" ++ filename
-
-getLifeStory :: Either String User -> Either String (IO String)
-getLifeStory = fmap getLifeStoryForUser
-
-printLifeStory :: Either String User -> IO ()
-printLifeStory user = do
-    case getLifeStory user of
-      (Left s) -> print s
-      (Right y) -> y >>= print
-
-main :: IO ()
-main = do
-    printLifeStory $ getUserByKeyValue myUsers _id "1"
-    printLifeStory $ getUserByKeyValue myUsers _id "4"
-    -- This line throws an error! how could we make it safe?
-    -- printLifeStory $ getUserByKeyValue myUsers _id "3"
-```
-
----
-
 # Do Notation
 
 There will be some scenarios where you want to use more than one container
@@ -618,7 +528,7 @@ There will be some scenarios where you want to use more than one container
     3. Ugly composition with lots of await statements
 
 
-For example, you cannot call await coroutines in a synchronous context:
+For example, you cannot await coroutines in a synchronous context:
 ```python
 def test():
     await my_async_routine()
@@ -666,35 +576,6 @@ print(second(first()))
 print(asyncio.run(second(asyncio.run(first()))))
 print(main())
 print(asyncio.run(main().awaitable()))
-```
-
----
-
-# Haskell Async
-
-Asynchronous processing requires much less syntactic sugar in Haskell.
-
-```Haskell
-import Control.Concurrent
-import Control.Concurrent.Async
-
-one :: IO Int
-one = return 1
-
-plusOne :: IO Int -> IO Int
-plusOne x = do
-    threadDelay 1000000
-    fmap (+1) x
-
-plusTwo :: IO Int -> IO Int
-plusTwo x = do
-    threadDelay 2000000
-    fmap (+2) x
-
-main :: IO ()
-main = do
-    res <- concurrently (plusOne one) (plusTwo one)
-    print res
 ```
 
 ---
@@ -817,44 +698,6 @@ def get_hostname() -> RequiresContext[str, _Settings]:
 
 print(get_hostname()(SETTINGS))
  ```
-
----
-
-# Haskell "RequiresContext"
-
-```Haskell
-data Settings = 
-    Settings {ip :: String, port :: Int, user :: String, passwd :: String}
-
-class Monad m => SshContextM m where
-  getSettings :: m Settings
-  executeCmd :: String -> m String
-
-mySettings :: SshContextM m => m Settings
-mySettings = return $ Settings {ip = "1.1.1.1", port = 22, user = "test", passwd = "test"}
-
-craftCmd :: Settings -> String -> String
-craftCmd settings cmd =
-    "sshpass -p " ++ passwd' ++ " ssh -p " ++ port' ++ " " ++ user' ++ "@" ++ ip' ++ " " ++ cmd
-    where
-     ip' = ip settings
-     port' = show $ port settings
-     user' = user settings
-     passwd' = passwd settings
-
-sshPassCmd :: SshContextM m => String -> m String
-sshPassCmd cmd = getSettings >>= (\settings -> return $ craftCmd settings cmd)
-
-instance SshContextM IO where
-  getSettings = mySettings
-  executeCmd = sshPassCmd
-
-getHostname :: SshContextM m => m String
-getHostname = executeCmd "hostname"
-
-main :: IO ()
-main = getHostname >>= print
-```
 
 ---
 
